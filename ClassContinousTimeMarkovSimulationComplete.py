@@ -5,11 +5,6 @@ Created on Mon Mar 02 08:05:02 2015
 @author: Glaucia
 """
 
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Feb 22 20:11:37 2015
-@author: Glaucia
-"""
 ##Continuous time Markov Simulation
 import scipy  
 from numpy.random import uniform
@@ -49,14 +44,14 @@ class ContMarkSim(object):
                     return events[t]
             return None
         A = np.squeeze(np.asarray(self.Q))##this transforms my Q matrix in an array A
-        StationaryProbs=linalg.expm(A*1000)
+        StationaryProbs=linalg.expm(A*1000)##getting the matrix with stationary probability. 
         i=discSamp(events=statespace,probs=StationaryProbs[1])##Sorting the first state
         E=0##Defining the starting point in the branch
         self.list4=[i]
         list6=[]
         list7=[]
         list10=[] 
-        M4=StationaryProbs[1][i]
+        M4=StationaryProbs[1][i]##This will give the respective stationary probability to sample the first state of my chain
         ##this for loop will calculate the transition matrix for each state from the Q matrix
         for d in range(len(self.Q)): 
             list11=[]    
@@ -107,7 +102,7 @@ class ContMarkSim(object):
             MargProbs=linalg.expm(A*self.v)##this calculates the marginal probabilities
             finaltime=self.waittimes[-1]
             finalstate=self.list4[-1]
-            cdffinaltime=1-(2.71826**(-(self.Q[finalstate][finalstate])*finaltime))
+            cdffinaltime=1-(2.71826**(-(self.Q[finalstate][finalstate])*finaltime))##calculating the probability of last waiting time without a particular change in it.
             M3=1-cdffinaltime
             self.MargProb=MargProbs[self.list4[0]][self.list4[-1]]
             self.TotalProbs=M4*M1*M2*M3##this multiplies the probabilities for each waiting time and for the each nucleotide, in other words, the probability of all the events that occurred in my simulation
@@ -138,6 +133,13 @@ print d.TotalProbs
 print d.MargProb
 
 
-        
-    
-    
+####trying to test a series of possible branch lengths to go from a nucleotide to another... I put this outside the method in order to think in a way of working with a character...        
+Q=[[-1.916,0.541,0.787,0.588],[0.148,-1.069,0.417,0.506],[0.286,0.170,-0.591,0.135],[0.525,0.236,0.594,-1.355]] 
+A = np.squeeze(np.asarray(Q))##transforming the Q matrix in an array 
+Liks=[]##list for likelihoods  
+for y in range(100):##varying the branch length from 0 to 99
+    MargProbsmatrix=linalg.expm(A*y)##getting the matrix with marginal probabilities
+    probsmargAG_CT_AT_AA=(MargProbsmatrix[0][2])*(MargProbsmatrix[1][3])*(MargProbsmatrix[0][3])*(MargProbsmatrix[0][0])##calculating the probabilities of starting at one nucleotide and going to other for 4 sites
+    Liks.append(probsmargAG_CT_AT_AA)  
+print Liks
+Liks.index(max(Liks))##the best branch length (with maximum likelihood) is the biggest one (v=99) even when using 4 nucleotides change

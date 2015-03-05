@@ -139,7 +139,41 @@ A = np.squeeze(np.asarray(Q))##transforming the Q matrix in an array
 Liks=[]##list for likelihoods  
 for y in range(100):##varying the branch length from 0 to 99
     MargProbsmatrix=linalg.expm(A*y)##getting the matrix with marginal probabilities
-    probsmargAG_CT_AT_AA=(MargProbsmatrix[0][2])*(MargProbsmatrix[1][3])*(MargProbsmatrix[0][3])*(MargProbsmatrix[0][0])##calculating the probabilities of starting at one nucleotide and going to other for 4 sites
-    Liks.append(probsmargAG_CT_AT_AA)  
+    probsmargAG_CT_AT_AA_TT_CC_GG=(MargProbsmatrix[0][2])*(MargProbsmatrix[1][3])*(MargProbsmatrix[0][3])*(MargProbsmatrix[0][0])*(MargProbsmatrix[3][3])*(MargProbsmatrix[1][1])*(MargProbsmatrix[2][2])##calculating the probabilities of starting at one nucleotide and going to other for 4 sites
+    Liks.append(probsmargAG_CT_AT_AA_TT_CC_GG)  
 print Liks
 Liks.index(max(Liks))##the best branch length (with maximum likelihood) is the biggest one (v=99) even when using 4 nucleotides change
+
+
+###########I can make a function to get the maximum likelihood estimator
+def mle(vCurr,diff,Q,states):##
+    first=states[0]
+    last=states[-1]    
+    A = np.squeeze(np.asarray(Q))    
+    vUp=vCurr+diff
+    vDown=vCurr-diff
+    MargProbsmatrixvCurr=linalg.expm(A*vCurr)
+    LvCurr=MargProbsmatrixvCurr[first][last]
+    MargProbsmatrixvUp=linalg.expm(A*vUp)
+    LvUp=MargProbsmatrixvUp[first][last]
+    MargProbsmatrixvDown=linalg.expm(A*vDown)
+    LvDown=MargProbsmatrixvDown[first][last]
+    if (LvCurr < LvUp):    
+        while (LvCurr < LvUp):
+            vCurr=vUp
+            MargProbsmatrixvCurr=linalg.expm(A*vCurr)
+            LvCurr=MargProbsmatrixvCurr[first][last]
+            vUp=vCurr+diff
+            MargProbsmatrixvUp=linalg.expm(A*vUp)
+            LvUp=MargProbsmatrixvUp[first][last]
+        return vCurr
+    else:
+        while (LvCurr < LvDown):
+            vCurr=vDown
+            MargProbsmatrixvCurr=linalg.expm(A*vCurr)
+            LvCurr=MargProbsmatrixvCurr[first][last]
+            vDown=vCurr-diff
+            MargProbsmatrixvDown=linalg.expm(A*vDown)
+            LvDown=MargProbsmatrixvDown[first][last]
+        return vCurr
+mle(4,1,[[-1.916,0.541,0.787,0.588],[0.148,-1.069,0.417,0.506],[0.286,0.170,-0.591,0.135],[0.525,0.236,0.594,-1.355]],[0,2,1,3,1,0,1,2] )

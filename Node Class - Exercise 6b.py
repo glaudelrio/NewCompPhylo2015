@@ -202,7 +202,16 @@ class ContMarkSim(object):
         return self.states,self.waittimes,self.TotalProbs,self.MargProb##returning the states(substitutions) and waiting times until reaching an ending time
 
 
-
+def discSamp(events,probs):
+            ranNum = scipy.random.random()
+            cumulProbs = []
+            cumulProbs.extend([probs[0]])
+            for t in range(1,len(probs)):
+                cumulProbs.extend([probs[t]+cumulProbs[-1]])
+            for t in range(0,len(probs)):
+                if ranNum < cumulProbs[t]:
+                    return events[t]
+            return None
 
 # We'll need this later, I promise. It's always better to put import statements
 # outside of class definitions. In fact, it's best to put them all at the top

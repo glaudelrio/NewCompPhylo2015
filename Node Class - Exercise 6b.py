@@ -208,7 +208,7 @@ class ContMarkSim(object):
 # outside of class definitions. In fact, it's best to put them all at the top
 # of a file. This imports the ctmc class that we previously defined.
 
-class Tree:
+class MyTree:
     """
     Defines a class of phylogenetic tree, consisting of linked Node objects.
     """
@@ -375,10 +375,20 @@ class Tree:
         This method prints out the names of the tips and their associated
         sequences as an alignment (matrix).
         """
-d=Tree()
+    def buildtree (self,newick_tree):
+        import ete2 ##This module has a set of functions that do well with newick structures. As I did not have time to come up with a new fucntion to transform a newick object in a tree, I used the built-in function. However, as soon as I have more time I will work on an original funtion to solve this problem.
+        # Loads a tree structure from a newick string. The returned variable ’t’ is the root node for the tree.
+        string = str (newick_tree)        
+        t = ete2.Tree(string)
+        print t##will print the tree structure, but the t object has all the relationships
+
+
+d=MyTree()
 d.printNames(node=d.root)
 d.treeLength(node=d.root)
 d.newickLists(node=d.root)##This gives a list of lists and not a string...=P
 d.newick(node=d.root)
 d.RootState()
 d.simulate(node=d.root,StartingPoint=d.RootState())##printing the sequences for each node.
+d.buildtree(newick_tree="(A:1,(B:1,(E:1,D:1):0.5):0.5);")##printing the tree structure from any newick objetc.
+

@@ -103,7 +103,8 @@ import operator
 import functools
 from scipy import linalg
 import numpy as np
-
+import re
+##Using the continous time Markov Chain Simulator to generate
 class ContMarkSim(object):
     
     def __init__ (self,NodeChain=1,v=10,Q=[[-1.916,0.541,0.787,0.588],[0.148,-1.069,0.417,0.506],[0.286,0.170,-0.591,0.135],[0.525,0.236,0.594,-1.355]],waittimes=[],list4=[], states=[],TotalProbs=[],MargProb=[],Likelihood=[]):
@@ -263,11 +264,11 @@ class MyTree:
         A method of a Tree object that will print out the names of its
         terminal nodes.
         """
-        if len(node.children) > 0:
-            for child in node.children:
+        if len(node.children) > 0:#if the node has children, or is not a terminal
+            for child in node.children:#dealing with the child these nodes
                 self.printNames(child)
         else:
-            print node.name
+            print node.name#this will print the names of terminals
     # Write a recursive function to calculate the total tree length (the sum of
     # all the branch lengths). Again, the root node of a tree should be the only 
     # argument the first time this function is called. Due next Tues (3/17).
@@ -295,7 +296,7 @@ class MyTree:
         if len(node.children) > 0:
             for child in node.children:
                 d=self.newickLists(child)
-                listoflists.append(d)
+                listoflists.append(d)#you just append each node as one list inside another
         else:
             listoflists.append(node.name)
         return listoflists###instead of a string this returns a list of lists, I know this could be a problem in the future, but for now the relationships of the nodes are mantained
@@ -303,20 +304,20 @@ class MyTree:
    ##This is the recursive function that will print the parenthetical tree in a string
    ##Based on Subir's code
     
-    def newick(self,node):
+    def newickstring(self,node):
         """
         A method of a Tree object that will print out the Tree as a 
         parenthetical string (Newick format).
         """
         parenthetical = "(" 
-        if len(node.children) == 0:
+        if len(node.children) == 0:#dealing with the terminals
             return node.name + ":" + str(node.brl)
         else:
             for child in node.children:
                 if node.children[-1] == child: 
-                    parenthetical += self.newick(child)
+                    parenthetical += self.newickstring(child)
                 else:
-                    parenthetical += self.newick(child) + ","
+                    parenthetical += self.newickstring(child) + ","
             if node.brl is not 0:
                 parenthetical += "):" + str(node.brl)
             else:
@@ -356,6 +357,7 @@ class MyTree:
         StartingPointvalue=discSamp(events=[0,1,2,3],probs=StationaryProbs[1])
         return StartingPointvalue## 0 corresponds to A, 1 corresponds to C, 2 corresponds to G and 3 to T
     
+    #This is the simulator:
     def simulate(self,node,StartingPoint):##This function simulates markov chains in each node of my tree
         """
         This method simulates evolution along the branches of a tree, taking
@@ -370,34 +372,121 @@ class MyTree:
                 print chain.list4
                 self.simulate(node=child,StartingPoint=node.chain)##recursion starting from the last state of the previous node
         else:
-            #if len(node.children)>0:
             for child in node.children:##dealing with internal nodes
                 chain=ContMarkSim(v=child.brl,NodeChain=node.parent.chain)##the first state will be the last one of the parent chain    
                 chain.MarkSim()
                 node.chain = chain.list4[-1]
                 print chain.list4
                 self.simulate(node=child,StartingPoint=node.chain)
-             
-    
-    #def printSeqs(self,node): My last function prints the sequences for each node.
-        """
-        This method prints out the names of the tips and their associated
-        sequences as an alignment (matrix).
-        """
+                #the chains are in numbers (0=A;1=C;2=G;3=T)
+        
     def buildtree (self,newick_tree):
         import ete2 ##This module has a set of functions that do well with newick structures. As I did not have time to come up with a new fucntion to transform a newick object in a tree, I used the built-in function. However, as soon as I have more time I will work on an original funtion to solve this problem.
         # Loads a tree structure from a newick string. The returned variable ’t’ is the root node for the tree.
         string = str (newick_tree)        
         t = ete2.Tree(string)
         print t##will print the tree structure, but the t object has all the relationships
+    ##The following function will start from a newick string and will give all the relationships between nodes and branch lenghths
+    def ReadNewick (self,data,base,space = None, extVar = None):
+
+        if base == "root" :#the content of this if statement will deal with the sons of the root
+            root = Node("root")
+            root.brl = "0"
+            extVar = root#creating a value that will be returned
+            son1 = data.partition('(')[-1].rpartition(')')[0]#striping the first parenthesis
+            regEx1 = re.compile(r'(.*?)\(.*\)')#separating values inside from outside parenthesis
+            result1 = re.findall(regEx1, son1)#another few steps to separate values inside and outside the parenthesis
+            result1=result1.pop(0)
+            result2 = son1.replace(result1,"")
+            result1 = result1[:-1]
+            result1=result1.split(",") 
+            result1.append(result2)#both values (root children) are now in a list
+            for obj in result1:#for each child in this list
+                branchname=obj.rpartition(":")[0]#let's grab the value before the ":", because this is the name of the node 
+                child=Node(name=branchname,parent="root")#this establishes the relationships of these nodes with the root
+                print "node name:",child.name #printing the sons of the root
+                root.children.append(child)
+                brl=obj.rpartition(":")[-1]#getting the branch length for each child
+                child.brl=brl
+                print "branch length:",child.brl #and their branch length
+                child.parent = root
+            for item in root.children:
+                if item.name[0]=="(":#if the child starts with a parenthesis, this means the child is an internal node, so we do a recursion to work on this node:
+                    self.ReadNewick(data=item.name,base="x",space=item)#making the recursion
+            return extVar#this will return the root
+        else:#now we are dealing with internal nodes which first character is an oppen parenthesis
+            son2 = data.partition('(')[-1].rpartition(')')[0]#striping the parenthesis
+            regEx1 = re.compile(r'(.*?)\(.*\)')#separating values inside and outside the parenthesis
+            result3 = re.findall(regEx1, son2)
+            if result3 != [] and result3 != ['']:#if there are still values outside the parenthesis for example in tree (A,(B,(C,D))), when you strip the first parenthesis you will have A and (B,(C,D)) 
+                result3=result3.pop(0)#just some steps to separate values inside and outside the parenthesis
+                result4 = son2.replace(result3,"")
+                result3=result3.split(",")
+                result3 = result3[:-1]
+                result3.append(result4)#putting the values in a list
+                for obj in result3:#for each object in this list (the children of the node)
+                    branchname=obj.rpartition(":")[0]#grab the node name
+                    child=Node(name=branchname,parent=data)#this establishes the relationships between the values in the list and its parent
+                    print "node name:", child.name #this will give the child of each internal node
+                    space.children.append(child)#dealing with space (space in the memory instead of node.name)
+                    brl=obj.rpartition(":")[-1]#grabing the branch length
+                    child.brl=brl
+                    print "branchlength:", child.brl #this will give the branch length for each internal node
+                    child.parent=space
+                    if child.name[0]=="(":#if some of the child still is inside a parenthesis, make a recursion for the child
+                        self.ReadNewick(data=child.name,base="x",space=child)
+            else:# this will deal with nodes with no values outside parenthesis... for example, in a tree (A,(B,(C,D))), this will deal with the node (C,D)
+                if son2.count("(") > 0:#this will deal with polytomies
+                    son3=son2.split(",(")
+                    for value in son3:
+                        if value[0]!="(":
+                            value1 = son3.pop(son3.index(value))
+                            value2 = "(" + value1
+                            son3.append(value2)
+                    for obj in son3:
+                        branchname=obj.rpartition(":")[0]
+                        child=Node(name=branchname,parent=data)
+                        space.children.append(child)
+                        brl=obj.rpartition(":")[-1]
+                        child.brl=brl
+                        print "node name:", child.name
+                        print "branch length:", child.brl
+                        child.parent=space 
+                        self.ReadNewick(data=child.name,base="x",space=child)
+                else:#this will deal with (C,D) for example and the next steps will deal with the most internal nodes.
+                    son3 = son2.split(",")
+                    for obj in son3:
+                        branchname=obj.rpartition(":")[0]
+                        child=Node(name=branchname,parent=data)
+                        space.children.append(child)
+                        brl=obj.rpartition(":")[-1]
+                        child.brl=brl
+                        print "node name:", child.name
+                        print "branch length:", child.brl
+                        child.parent=space
+
 
 
 d=MyTree()
 d.printNames(node=d.root)
 d.treeLength(node=d.root)
 d.newickLists(node=d.root)##This gives a list of lists and not a string...=P
-d.newick(node=d.root)
+stringTree=d.newickstring(node=d.root)
+print stringTree
 d.RootState()
 d.simulate(node=d.root,StartingPoint=d.RootState())##printing the sequences for each node.
 d.buildtree(newick_tree="(A:1,(B:1,(E:1,D:1):0.5):0.5);")##printing the tree structure from any newick objetc.
+banana="(A:1,B:0.5,(C:0.1,((D:0.2,E:1):0.5):1):0.6)" 
+x=d.ReadNewick(data=banana,base="root",space=None)
+d.newickLists(node=x)
+d.newickstring(node=x)           
 
+
+
+
+
+
+    
+    
+       
+    
